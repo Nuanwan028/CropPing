@@ -15,7 +15,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
-import static cropping.service.CropService.ZONE;
 
 @RestController
 @RequestMapping("/webhook")
@@ -78,9 +77,11 @@ public class WebhookController {
                                 .plusHours(hours)
                                 .plusMinutes(minutes);
 
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
+                        DateTimeFormatter formatter = DateTimeFormatter
+                                .ofPattern("dd MMM HH:mm")
+                                .withZone(ZONE);
 
-                        String formattedTime = result.format(formatter); // ⭐ format ตรงนี้
+                        String formattedTime = formatter.format(result);
 
                         lineService.replyTimeWithSetButton(
                                 replyToken,
