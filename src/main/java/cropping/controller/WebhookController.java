@@ -77,17 +77,22 @@ public class WebhookController {
                                 .plusHours(hours)
                                 .plusMinutes(minutes);
 
-                        DateTimeFormatter formatter = DateTimeFormatter
-                                .ofPattern("dd MMM HH:mm")
-                                .withZone(ZONE);
-
-                        String formattedTime = formatter.format(result);
+                        String formattedTime = result
+                                .withZoneSameInstant(ZONE) // บังคับ Bangkok อีกรอบกันพลาด
+                                .format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
 
                         lineService.replyTimeWithSetButton(
                                 replyToken,
                                 hours,
                                 minutes,
-                                formattedTime // ส่งเป็น String ไปเลย
+                                formattedTime
+                        );
+
+                        lineService.replyTimeWithSetButton(
+                                replyToken,
+                                hours,
+                                minutes,
+                                formattedTime
                         );
 
                         return ResponseEntity.ok().build();

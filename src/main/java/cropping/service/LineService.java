@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import cropping.entity.Crop;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -201,10 +200,10 @@ public class LineService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
 
             if ("reminder".equals(c.getType())) {
-                displayText = "แจ้งเตือน\n ⏰" + c.getHarvestTime().format(formatter);
+                displayText = "แจ้งเตือน " + c.getHarvestTime().format(formatter);
             } else {
                 displayText = c.getCropName() +
-                        "\n⏰" + c.getHarvestTime().format(formatter);
+                        " " + c.getHarvestTime().format(formatter);
             }
 
             contents.add(Map.of(
@@ -271,8 +270,6 @@ public class LineService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(channelToken);
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
 
         Map<String, Object> body = new HashMap<>();
         body.put("replyToken", replyToken);
