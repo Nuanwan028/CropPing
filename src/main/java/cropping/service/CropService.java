@@ -5,6 +5,7 @@ import cropping.entity.Crop;
 import cropping.repository.CropRepository;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -38,7 +39,7 @@ public class CropService {
 
         int growTime = getGrowTime(message); // นาที
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
         LocalDateTime harvestTime = now.plusMinutes(growTime);
         LocalDateTime earlyTime = harvestTime.minusMinutes(5);
 
@@ -103,7 +104,7 @@ public class CropService {
 
     public void createReminder(String userId, int hours, int minutes, String replyToken) {
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
         LocalDateTime notifyTime = now.plusHours(hours).plusMinutes(minutes);
 
         // ✅ สร้าง reminder
