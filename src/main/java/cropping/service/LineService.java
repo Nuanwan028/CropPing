@@ -1,10 +1,10 @@
-package se331.cropping.service;
+package cropping.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import se331.cropping.entity.Crop;
+import cropping.entity.Crop;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

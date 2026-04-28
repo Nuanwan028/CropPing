@@ -1,4 +1,4 @@
-package se331.cropping.service;
+package cropping.service;
 
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;

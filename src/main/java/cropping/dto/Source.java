@@ -1,4 +1,4 @@
-package se331.cropping.dto;
+package cropping.dto;
 
 import lombok.Data;
 

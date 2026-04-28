@@ -1,7 +1,6 @@
-package se331.cropping.dto;
+package cropping.dto;
 
 import lombok.Data;
-import se331.cropping.dto.Source;
 
 @Data
 public class Event {

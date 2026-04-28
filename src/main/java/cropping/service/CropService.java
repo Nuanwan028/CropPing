@@ -1,8 +1,8 @@
-package se331.cropping.service;
+package cropping.service;
 
 import org.springframework.stereotype.Service;
-import se331.cropping.entity.Crop;
-import se331.cropping.repository.CropRepository;
+import cropping.entity.Crop;
+import cropping.repository.CropRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

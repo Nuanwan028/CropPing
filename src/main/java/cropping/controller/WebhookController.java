@@ -1,18 +1,17 @@
-package se331.cropping.controller;
+package cropping.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import se331.cropping.dto.Event;
-import se331.cropping.dto.LineWebhookRequest;
-import se331.cropping.service.CropService;
-import se331.cropping.service.LineService;
-import se331.cropping.service.SchedulerService;
+import cropping.dto.Event;
+import cropping.dto.LineWebhookRequest;
+import cropping.service.CropService;
+import cropping.service.LineService;
+import cropping.service.SchedulerService;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/webhook")

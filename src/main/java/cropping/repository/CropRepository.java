@@ -1,7 +1,7 @@
-package se331.cropping.repository;
+package cropping.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import se331.cropping.entity.Crop;
+import cropping.entity.Crop;
 
 import java.util.List;
 

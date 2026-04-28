@@ -1,4 +1,4 @@
-package se331.cropping.entity;
+package cropping.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

@@ -1,8 +1,7 @@
-package se331.cropping.dto;
+package cropping.dto;
 
 import lombok.Data;
 
-import java.awt.*;
 import java.util.List;
 
 @Data
