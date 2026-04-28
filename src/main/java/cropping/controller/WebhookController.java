@@ -11,7 +11,10 @@ import cropping.service.CropService;
 import cropping.service.LineService;
 import cropping.service.SchedulerService;
 
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
+import static cropping.service.CropService.ZONE;
 
 @RestController
 @RequestMapping("/webhook")
@@ -20,6 +23,8 @@ public class WebhookController {
     private final CropService cropService;
     private final LineService lineService;
     private final SchedulerService scheduler;
+
+    private static final ZoneId ZONE = ZoneId.of("Asia/Bangkok");
 
     public WebhookController(CropService cropService, LineService lineService, SchedulerService scheduler) {
         this.cropService = cropService;
@@ -68,12 +73,11 @@ public class WebhookController {
                         int hours = Integer.parseInt(parts[0]);
                         int minutes = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
 
-                        LocalDateTime result = LocalDateTime.now()
+                        ZonedDateTime result = ZonedDateTime.now(ZONE)
                                 .plusHours(hours)
                                 .plusMinutes(minutes);
 
-
-                        lineService.replyTimeWithSetButton(replyToken, hours, minutes, result);
+                        lineService.replyTimeWithSetButton(replyToken, hours, minutes, result.toLocalDateTime());
 
                         return ResponseEntity.ok().build();
 

@@ -6,6 +6,7 @@ import cropping.repository.CropRepository;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -14,6 +15,8 @@ public class CropService {
     private final CropRepository repo;
     private final SchedulerService scheduler;
     private final LineService lineService;
+
+    public static final ZoneId ZONE = ZoneId.of("Asia/Bangkok");
 
     public CropService(CropRepository repo, SchedulerService scheduler, LineService lineService) {
         this.repo = repo;
@@ -39,22 +42,22 @@ public class CropService {
 
         int growTime = getGrowTime(message); // นาที
 
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
-        LocalDateTime harvestTime = now.plusMinutes(growTime);
-        LocalDateTime earlyTime = harvestTime.minusMinutes(5);
+        ZonedDateTime now = ZonedDateTime.now(ZONE);
+        ZonedDateTime harvestTime = now.plusMinutes(growTime);
+        ZonedDateTime earlyTime = harvestTime.minusMinutes(5);
 
         Crop crop = new Crop();
         crop.setUserId(userId);
         crop.setCropName(message);
-        crop.setPlantTime(now);
-        crop.setHarvestTime(harvestTime);
+        crop.setPlantTime(now.toLocalDateTime());
+        crop.setHarvestTime(harvestTime.toLocalDateTime());
         crop.setNotifyEarly(true);
         crop.setType("crop");
 
         repo.save(crop);
 
         // schedule
-        scheduler.scheduleNotification(userId, message, harvestTime, earlyTime);
+        scheduler.scheduleNotification(userId, message, harvestTime.toLocalDateTime(), earlyTime.toLocalDateTime());
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
 
@@ -104,15 +107,17 @@ public class CropService {
 
     public void createReminder(String userId, int hours, int minutes, String replyToken) {
 
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
-        LocalDateTime notifyTime = now.plusHours(hours).plusMinutes(minutes);
+        ZonedDateTime now = ZonedDateTime.now(ZONE);
+        ZonedDateTime notifyTime = now.plusHours(hours).plusMinutes(minutes);
 
         // ✅ สร้าง reminder
         Crop reminder = new Crop();
         reminder.setUserId(userId);
         reminder.setCropName("⏰ แจ้งเตือน");
-        reminder.setPlantTime(now);
-        reminder.setHarvestTime(notifyTime);
+
+        reminder.setPlantTime(now.toLocalDateTime());
+        reminder.setHarvestTime(notifyTime.toLocalDateTime());
+
         reminder.setNotifyEarly(false);
         reminder.setType("reminder");
 
@@ -122,8 +127,8 @@ public class CropService {
         scheduler.scheduleNotification(
                 userId,
                 "⏰ แจ้งเตือนของคุณ",
-                notifyTime,
-                notifyTime
+                notifyTime.toLocalDateTime(),
+                notifyTime.toLocalDateTime()
         );
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
