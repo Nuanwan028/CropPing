@@ -266,7 +266,7 @@ public class LineService {
         restTemplate.postForEntity(REPLY_URL, new HttpEntity<>(body, headers), String.class);
     }
 
-    public void replyTimeWithSetButton(String replyToken, int hours, int minutes, LocalDateTime result) {
+    public void replyTimeWithSetButton(String replyToken, int hours, int minutes, String formattedTime) {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -304,7 +304,7 @@ public class LineService {
                 ),
                 Map.of(
                         "type", "text",
-                        "text", "👉 จะเป็นเวลา " + result.format(formatter),
+                        "text", "👉 จะเป็นเวลา " + formattedTime,
                         "size", "md",
                         "weight", "bold"
                 )

@@ -13,6 +13,7 @@ import cropping.service.SchedulerService;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static cropping.service.CropService.ZONE;
 
@@ -77,7 +78,16 @@ public class WebhookController {
                                 .plusHours(hours)
                                 .plusMinutes(minutes);
 
-                        lineService.replyTimeWithSetButton(replyToken, hours, minutes, result.toLocalDateTime());
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
+
+                        String formattedTime = result.format(formatter); // ⭐ format ตรงนี้
+
+                        lineService.replyTimeWithSetButton(
+                                replyToken,
+                                hours,
+                                minutes,
+                                formattedTime // ส่งเป็น String ไปเลย
+                        );
 
                         return ResponseEntity.ok().build();
 
