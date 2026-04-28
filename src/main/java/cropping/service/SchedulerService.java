@@ -13,6 +13,8 @@ public class SchedulerService {
     private final TaskScheduler taskScheduler;
     private final LineService lineService;
 
+    private static final ZoneId ZONE = ZoneId.of("Asia/Bangkok");
+
     public SchedulerService(TaskScheduler taskScheduler, LineService lineService) {
         this.taskScheduler = taskScheduler;
         this.lineService = lineService;
@@ -24,11 +26,11 @@ public class SchedulerService {
         // เตือนก่อน
         taskScheduler.schedule(() -> {
             lineService.push(userId, "⏰ อีก 5 นาที " + crop + " จะโต!");
-        }, Date.from(early.atZone(ZoneId.systemDefault()).toInstant()));
-
+        }, Date.from(early.atZone(ZONE).toInstant()));
+        
         // เตือนจริง
         taskScheduler.schedule(() -> {
             lineService.push(userId, "🌱 " + crop + " โตแล้ว!");
-        }, Date.from(harvest.atZone(ZoneId.systemDefault()).toInstant()));
+        }, Date.from(harvest.atZone(ZONE).toInstant()));
     }
 }
