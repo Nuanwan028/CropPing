@@ -100,34 +100,60 @@ public class LineService {
         contents.add(Map.of("type", "separator", "margin", "lg"));
 
         // crops
-        contents.add(createCropBox("🍅 Tomato", "15 นาที", "tomato"));
+        // contents.add(createCropBox("🍅 Tomato", "15 นาที", "tomato"));
+        contents.add(createCropBox("🍅 มะเขือเทศ", "15 นาที", "tomato"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🍍 Pineapple", "30 นาที", "pineapple"));
+        // contents.add(createCropBox("🌾 Paddy", "20 นาที", "paddy"));
+        contents.add(createCropBox("🌾 ข้าว", "20 นาที", "paddy"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🥔 Potato", "60 นาที", "potato"));
+        // contents.add(createCropBox("🍍 Pineapple", "30 นาที", "pineapple"));
+        contents.add(createCropBox("🍍 สับปะรด", "30 นาที", "pineapple"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🥕 Carrot", "2 ชม.", "carrot"));
+        // contents.add(createCropBox("🍃 Tea", "45 นาที", "tea"));
+        contents.add(createCropBox("🍃 ใบชา", "45 นาที", "tea"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🌾 Wheat", "4 ชม.", "wheat"));
+        // contents.add(createCropBox("🥔 Potato", "60 นาที", "potato"));
+        contents.add(createCropBox("🥔 มันฝรั่ง", "60 นาที", "potato"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🍓 Strawberry", "6 ชม.", "strawberry"));
+        // contents.add(createCropBox("🥕 Carrot", "2 ชม.", "carrot"));
+        contents.add(createCropBox("🥕 แครอท", "2 ชม.", "carrot"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🍆 Eggplant", "7 ชม.", "eggplant"));
+        // contents.add(createCropBox("🌾 Wheat", "4 ชม.", "wheat"));
+        contents.add(createCropBox("🌾 ข้าวสาลี", "4 ชม.", "wheat"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🥬 Lettuce", "8 ชม.", "lettuce"));
+        // contents.add(createCropBox("🍫 Cacao", "5 ชม.", "cacao"));
+        contents.add(createCropBox("🍫 โกโก้", "5 ชม.", "cacao"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🍇 Grape", "10 ชม.", "grape"));
+        // contents.add(createCropBox("🍓 Strawberry", "6 ชม.", "strawberry"));
+        contents.add(createCropBox("🍓 สตรอว์เบอร์รี่", "6 ชม.", "strawberry"));
         contents.add(Map.of("type", "separator", "margin", "md"));
 
-        contents.add(createCropBox("🌽 Corn", "12 ชม.", "corn"));
+        // contents.add(createCropBox("🍆 Eggplant", "7 ชม.", "eggplant"));
+        contents.add(createCropBox("🍆 มะเขือ", "7 ชม.", "eggplant"));
+        contents.add(Map.of("type", "separator", "margin", "md"));
+
+        // contents.add(createCropBox("🥬 Lettuce", "8 ชม.", "lettuce"));
+        contents.add(createCropBox("🥬 ผักกาด", "8 ชม.", "lettuce"));
+        contents.add(Map.of("type", "separator", "margin", "md"));
+
+        // contents.add(createCropBox("🍇 Grape", "10 ชม.", "grape"));
+        contents.add(createCropBox("🍇 องุ่น", "10 ชม.", "grape"));
+        contents.add(Map.of("type", "separator", "margin", "md"));
+
+        // contents.add(createCropBox("🌽 Corn", "12 ชม.", "corn"));
+        contents.add(createCropBox("🌽 ข้าวโพด", "12 ชม.", "corn"));
+        contents.add(Map.of("type", "separator", "margin", "md"));
+
+        // contents.add(createCropBox("🥑 Avocado", "14 ชม.", "avocado"));
+        contents.add(createCropBox("🥑 อะโวคาโด", "14 ชม.", "avocado"));
 
         bodyBox.put("contents", contents);
         bubble.put("body", bodyBox);

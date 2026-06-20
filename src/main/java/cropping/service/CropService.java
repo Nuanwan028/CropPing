@@ -26,9 +26,9 @@ public class CropService {
 
     private boolean isValidCrop(String crop) {
         return switch (crop.toLowerCase()) {
-            case "tomato", "pineapple", "potato",
-                 "carrot", "wheat", "strawberry",
-                 "eggplant", "lettuce", "grape", "corn" -> true;
+            case "tomato", "pineapple", "paddy", "potato", "carrot", "wheat", "strawberry", "eggplant", "lettuce",
+                    "grape", "corn", "tea", "cacao", "avocado" ->
+                true;
             default -> false;
         };
     }
@@ -69,15 +69,19 @@ public class CropService {
     private int getGrowTime(String crop) {
         return switch (crop.toLowerCase()) {
             case "tomato" -> 15;
+            case "paddy" -> 20;
             case "pineapple" -> 30;
+            case "tea" -> 45;
             case "potato" -> 60;
-            case "carrot" -> 120;    // 2 hr
-            case "wheat" -> 240;     // 4 hr
+            case "carrot" -> 120; // 2 hr
+            case "wheat" -> 240; // 4 hr
+            case "cacao" -> 300; // 5 hr
             case "strawberry" -> 360; // 6 hr
-            case "eggplant" -> 420;   // 7 hr
-            case "lettuce" -> 480;    // 8 hr
-            case "grape" -> 600;      // 10 hr
-            case "corn" -> 720;       // 12 hr
+            case "eggplant" -> 420; // 7 hr
+            case "lettuce" -> 480; // 8 hr
+            case "grape" -> 600; // 10 hr
+            case "corn" -> 720; // 12 hr
+            case "avocado" -> 840; // 14 hr
             default -> 0;
         };
     }
@@ -128,8 +132,7 @@ public class CropService {
                 userId,
                 "⏰ แจ้งเตือนของคุณ",
                 notifyTime.toLocalDateTime(),
-                notifyTime.toLocalDateTime()
-        );
+                notifyTime.toLocalDateTime());
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
