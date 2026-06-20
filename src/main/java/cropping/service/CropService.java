@@ -59,11 +59,32 @@ public class CropService {
         // schedule
         scheduler.scheduleNotification(userId, message, harvestTime.toLocalDateTime(), earlyTime.toLocalDateTime());
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
         // reply
+        String cropDisplay = getCropDisplayName(message);
         lineService.reply(replyToken,
-                "🌱 " + message + " ปลูกแล้ว!\n⏰ จะโตตอน " + harvestTime.format(formatter));
+                "🌱 " + cropDisplay + " ปลูกแล้ว!\n⏰ จะโตตอน " + harvestTime.format(formatter));
+    }
+
+    private String getCropDisplayName(String cropName) {
+        return switch (cropName.toLowerCase()) {
+            case "tomato" -> "🍅 มะเขือเทศ";
+            case "paddy" -> "🌾 ข้าว";
+            case "pineapple" -> "🍍 สับปะรด";
+            case "tea" -> "🍃 ชา";
+            case "potato" -> "🥔 มันฝรั่ง";
+            case "carrot" -> "🥕 แครอท";
+            case "wheat" -> "🌾 ข้าวสาลี";
+            case "cacao" -> "🍫 โกโก้";
+            case "strawberry" -> "🍓 สตรอว์เบอร์รี่";
+            case "eggplant" -> "🍆 มะเขือ";
+            case "lettuce" -> "🥬 ผักกาด";
+            case "grape" -> "🍇 องุ่น";
+            case "corn" -> "🌽 ข้าวโพด";
+            case "avocado" -> "🥑 อะโวคาโด";
+            default -> cropName;
+        };
     }
 
     private int getGrowTime(String crop) {
@@ -89,13 +110,28 @@ public class CropService {
     public void handleList(String userId, String replyToken) {
 
         var crops = repo.findByUserId(userId);
+        ZonedDateTime now = ZonedDateTime.now(ZONE);
 
-        if (crops.isEmpty()) {
+        // กรองพืชที่ยังไม่โต (เวลาเก็บเกี่ยวยังไม่ถึง)
+        var activeCrops = crops.stream()
+                .filter(c -> c.getHarvestTime().isAfter(now.toLocalDateTime()))
+                .toList();
+
+        // ลบพืชที่โตเกินเวลาแล้ว
+        var expiredCrops = crops.stream()
+                .filter(c -> !c.getHarvestTime().isAfter(now.toLocalDateTime()))
+                .toList();
+
+        if (!expiredCrops.isEmpty()) {
+            repo.deleteAll(expiredCrops);
+        }
+
+        if (activeCrops.isEmpty()) {
             lineService.reply(replyToken, "📭 ไม่มีพืชที่ปลูกอยู่");
             return;
         }
 
-        lineService.replyCropList(replyToken, crops);
+        lineService.replyCropList(replyToken, activeCrops);
     }
 
     public void cancelCrop(Long id, String replyToken) {

@@ -20,17 +20,39 @@ public class SchedulerService {
         this.lineService = lineService;
     }
 
+    private String getCropDisplayName(String cropName) {
+        return switch (cropName.toLowerCase()) {
+            case "tomato" -> "🍅 มะเขือเทศ";
+            case "paddy" -> "🌾 ข้าว";
+            case "pineapple" -> "🍍 สับปะรด";
+            case "tea" -> "🍃 ชา";
+            case "potato" -> "🥔 มันฝรั่ง";
+            case "carrot" -> "🥕 แครอท";
+            case "wheat" -> "🌾 ข้าวสาลี";
+            case "cacao" -> "🍫 โกโก้";
+            case "strawberry" -> "🍓 สตรอว์เบอร์รี่";
+            case "eggplant" -> "🍆 มะเขือ";
+            case "lettuce" -> "🥬 ผักกาด";
+            case "grape" -> "🍇 องุ่น";
+            case "corn" -> "🌽 ข้าวโพด";
+            case "avocado" -> "🥑 อะโวคาโด";
+            default -> cropName;
+        };
+    }
+
     public void scheduleNotification(String userId, String crop,
                                      LocalDateTime harvest, LocalDateTime early) {
 
+        String cropDisplay = getCropDisplayName(crop);
+
         // เตือนก่อน
         taskScheduler.schedule(() -> {
-            lineService.push(userId, "⏰ อีก 5 นาที " + crop + " จะโต!");
+            lineService.push(userId, "⏰ อีก 5 นาที " + cropDisplay + "จะโต!");
         }, Date.from(early.atZone(ZONE).toInstant()));
-        
+
         // เตือนจริง
         taskScheduler.schedule(() -> {
-            lineService.push(userId, "🌱 " + crop + " โตแล้ว!");
+            lineService.push(userId, + cropDisplay + "โตแล้ว!");
         }, Date.from(harvest.atZone(ZONE).toInstant()));
     }
 }

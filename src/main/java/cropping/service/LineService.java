@@ -200,6 +200,26 @@ public class LineService {
         );
     }
 
+    private String getCropDisplayName(String cropName) {
+        return switch (cropName.toLowerCase()) {
+            case "tomato" -> "🍅 มะเขือเทศ";
+            case "paddy" -> "🌾 ข้าว";
+            case "pineapple" -> "🍍 สับปะรด";
+            case "tea" -> "🍃 ใบชา";
+            case "potato" -> "🥔 มันฝรั่ง";
+            case "carrot" -> "🥕 แครอท";
+            case "wheat" -> "🌾 ข้าวสาลี";
+            case "cacao" -> "🍫 โกโก้";
+            case "strawberry" -> "🍓 สตรอว์เบอร์รี่";
+            case "eggplant" -> "🍆 มะเขือ";
+            case "lettuce" -> "🥬 ผักกาด";
+            case "grape" -> "🍇 องุ่น";
+            case "corn" -> "🌽 ข้าวโพด";
+            case "avocado" -> "🥑 อะโวคาโด";
+            default -> cropName;
+        };
+    }
+
     public void replyCropList(String replyToken, List<Crop> crops) {
 
         HttpHeaders headers = new HttpHeaders();
@@ -223,14 +243,10 @@ public class LineService {
         for (Crop c : crops) {
 
             String displayText;
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM HH:mm");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
-            if ("reminder".equals(c.getType())) {
-                displayText = "แจ้งเตือน " + c.getHarvestTime().format(formatter);
-            } else {
-                displayText = c.getCropName() +
-                        " " + c.getHarvestTime().format(formatter);
-            }
+            displayText = getCropDisplayName(c.getCropName()) +
+                    " | " + c.getHarvestTime().format(formatter);
 
             contents.add(Map.of(
                     "type", "box",
