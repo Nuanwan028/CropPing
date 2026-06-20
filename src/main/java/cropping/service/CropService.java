@@ -109,35 +109,4 @@ public class CropService {
         lineService.reply(replyToken, "🗑 ลบทั้งหมดแล้ว");
     }
 
-    public void createReminder(String userId, int hours, int minutes, String replyToken) {
-
-        ZonedDateTime now = ZonedDateTime.now(ZONE);
-        ZonedDateTime notifyTime = now.plusHours(hours).plusMinutes(minutes);
-
-        // ✅ สร้าง reminder
-        Crop reminder = new Crop();
-        reminder.setUserId(userId);
-        reminder.setCropName("⏰ แจ้งเตือน");
-
-        reminder.setPlantTime(now.toLocalDateTime());
-        reminder.setHarvestTime(notifyTime.toLocalDateTime());
-
-        reminder.setNotifyEarly(false);
-        reminder.setType("reminder");
-
-        repo.save(reminder); // ⭐ สำคัญ
-
-        // schedule
-        scheduler.scheduleNotification(
-                userId,
-                "⏰ แจ้งเตือนของคุณ",
-                notifyTime.toLocalDateTime(),
-                notifyTime.toLocalDateTime());
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-
-        lineService.reply(replyToken,
-                "✅ ตั้งแจ้งเตือนแล้ว!\n⏰ เวลา " + notifyTime.format(formatter));
-    }
-
 }

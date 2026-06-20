@@ -51,67 +51,6 @@ public class WebhookController {
                     return ResponseEntity.ok().build();
                 }
 
-                if (text.equalsIgnoreCase("time")) {
-                    lineService.reply(replyToken, "⏰ ใส่เวลาแบบนี้:\nเช่น: 1:30 | 1.30 | 1 30");
-                    return ResponseEntity.ok().build();
-                }
-
-                if (text.matches(".*\\d+.*")) {
-
-                    try {
-                        String cleaned = text
-                                .toLowerCase()
-                                .replace("time", "")
-                                .replace(".", ":")
-                                .trim();
-
-                        String[] parts = cleaned.split("[:\\s]+");
-
-                        int hours = Integer.parseInt(parts[0]);
-                        int minutes = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-
-                        ZonedDateTime result = ZonedDateTime.now(ZONE)
-                                .plusHours(hours)
-                                .plusMinutes(minutes);
-
-                        String formattedTime = result
-                                .withZoneSameInstant(ZONE) // บังคับ Bangkok อีกรอบกันพลาด
-                                .format(DateTimeFormatter.ofPattern("dd MMM HH:mm"));
-
-                        lineService.replyTimeWithSetButton(
-                                replyToken,
-                                hours,
-                                minutes,
-                                formattedTime
-                        );
-
-                        lineService.replyTimeWithSetButton(
-                                replyToken,
-                                hours,
-                                minutes,
-                                formattedTime
-                        );
-
-                        return ResponseEntity.ok().build();
-
-                    } catch (Exception e) {
-                        // ปล่อยให้ไปเข้า crop ต่อ
-                    }
-                }
-
-                if (text.startsWith("settime")) {
-
-                    String input = text.substring(8).trim();
-                    String[] parts = input.split(":");
-
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-
-                    cropService.createReminder(userId, hours, minutes, replyToken);
-
-                    return ResponseEntity.ok().build();
-                }
-
                 if (text.startsWith("cancel:")) {
                     Long id = Long.parseLong(text.split(":")[1]);
                     cropService.cancelCrop(id, replyToken);
