@@ -47,12 +47,12 @@ public class SchedulerService {
 
         // เตือนก่อน
         taskScheduler.schedule(() -> {
-            lineService.push(userId, "⏰ อีก 5 นาที " + cropDisplay + "จะโต!");
+            lineService.push(userId, "⏰ อีก 5 นาที " + cropDisplay + " จะโต!");
         }, Date.from(early.atZone(ZONE).toInstant()));
 
         // เตือนจริง
         taskScheduler.schedule(() -> {
-            lineService.push(userId + cropDisplay + "โตแล้ว!");
+            lineService.push(userId, "🌱 " + cropDisplay + " โตแล้ว!");
         }, Date.from(harvest.atZone(ZONE).toInstant()));
     }
 }
