@@ -52,7 +52,7 @@ public class SchedulerService {
 
         // เตือนจริง
         taskScheduler.schedule(() -> {
-            lineService.push(userId, + cropDisplay + "โตแล้ว!");
+            lineService.push(userId + cropDisplay + "โตแล้ว!");
         }, Date.from(harvest.atZone(ZONE).toInstant()));
     }
 }
