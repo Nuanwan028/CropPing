@@ -15,13 +15,16 @@ public class CropService {
     private final CropRepository repo;
     private final SchedulerService scheduler;
     private final LineService lineService;
+    private final DiscordService discordService;
 
     public static final ZoneId ZONE = ZoneId.of("Asia/Bangkok");
 
-    public CropService(CropRepository repo, SchedulerService scheduler, LineService lineService) {
+    public CropService(CropRepository repo, SchedulerService scheduler,
+                      LineService lineService, DiscordService discordService) {
         this.repo = repo;
         this.scheduler = scheduler;
         this.lineService = lineService;
+        this.discordService = discordService;
     }
 
     private boolean isValidCrop(String crop) {
@@ -33,10 +36,22 @@ public class CropService {
         };
     }
 
-    public void handleUserMessage(String userId, String message, String replyToken) {
+    /**
+     * จัดการเมื่อ user สั่งปลูกพืช (รองรับทั้ง LINE และ Discord)
+     *
+     * @param userId ID ของ user
+     * @param message ชื่อพืช
+     * @param replyToken LINE replyToken (ถ้าเป็น LINE) หรือ Discord channelId (ถ้าเป็น Discord)
+     * @param platform "LINE" หรือ "DISCORD"
+     */
+    public void handleUserMessage(String userId, String message, String replyToken, String platform) {
 
         if (!isValidCrop(message)) {
-            lineService.reply(replyToken, "❌ ไม่รู้จักพืชนี้");
+            if ("LINE".equals(platform)) {
+                lineService.reply(replyToken, "❌ ไม่รู้จักพืชนี้");
+            } else {
+                discordService.sendMessage(replyToken, "❌ ไม่รู้จักพืชนี้");
+            }
             return;
         }
 
@@ -63,8 +78,28 @@ public class CropService {
 
         // reply
         String cropDisplay = getCropDisplayName(message);
-        lineService.reply(replyToken,
-                "🌱 " + cropDisplay + " ปลูกแล้ว!\n⏰ จะโตตอน " + harvestTime.format(formatter));
+        String harvestTimeStr = harvestTime.format(formatter);
+
+        if ("LINE".equals(platform)) {
+            lineService.reply(replyToken,
+                    "🌱 " + cropDisplay + " ปลูกแล้ว!\n⏰ จะโตตอน " + harvestTimeStr);
+        } else {
+            discordService.sendPlantSuccess(replyToken, message, harvestTimeStr);
+        }
+    }
+
+    /**
+     * Overload method - สำหรับ BACKWARD COMPATIBILITY (LINE เดิม)
+     */
+    public void handleUserMessageLine(String userId, String message, String replyToken) {
+        handleUserMessage(userId, message, replyToken, "LINE");
+    }
+
+    /**
+     * Overload method - สำหรับ Discord
+     */
+    public void handleUserMessage(String userId, String message, String channelId) {
+        handleUserMessage(userId, message, channelId, "DISCORD");
     }
 
     private String getCropDisplayName(String cropName) {
@@ -107,7 +142,10 @@ public class CropService {
         };
     }
 
-    public void handleList(String userId, String replyToken) {
+    /**
+     * ดูรายการพืชทั้งหมด (รองรับทั้ง LINE และ Discord)
+     */
+    public void handleList(String userId, String targetId, String platform) {
 
         var crops = repo.findByUserId(userId);
         ZonedDateTime now = ZonedDateTime.now(ZONE);
@@ -127,22 +165,65 @@ public class CropService {
         }
 
         if (activeCrops.isEmpty()) {
-            lineService.reply(replyToken, "📭 ไม่มีพืชที่ปลูกอยู่");
+            if ("LINE".equals(platform)) {
+                lineService.reply(targetId, "📭 ไม่มีพืชที่ปลูกอยู่");
+            } else {
+                discordService.sendMessage(targetId, "📭 ไม่มีพืชที่ปลูกอยู่");
+            }
             return;
         }
 
-        lineService.replyCropList(replyToken, activeCrops);
+        if ("LINE".equals(platform)) {
+            lineService.replyCropList(targetId, activeCrops);
+        } else {
+            discordService.sendCropList(targetId, activeCrops);
+        }
     }
 
-    public void cancelCrop(Long id, String replyToken) {
+    /**
+     * Overload - สำหรับ LINE (backward compatibility)
+     */
+    public void handleList(String userId, String replyToken) {
+        handleList(userId, replyToken, "LINE");
+    }
+
+    /**
+     * ยกเลิกพืช (รองรับทั้ง LINE และ Discord)
+     */
+    public void cancelCrop(Long id, String targetId, String platform) {
         repo.deleteById(id);
-        lineService.reply(replyToken, "❌ ยกเลิกเรียบร้อย");
+        if ("LINE".equals(platform)) {
+            lineService.reply(targetId, "❌ ยกเลิกเรียบร้อย");
+        } else {
+            discordService.sendCropCancelled(targetId, "", String.valueOf(id));
+        }
     }
 
-    public void cancelAll(String userId, String replyToken) {
+    /**
+     * Overload - สำหรับ LINE (backward compatibility)
+     */
+    public void cancelCrop(Long id, String replyToken) {
+        cancelCrop(id, replyToken, "LINE");
+    }
+
+    /**
+     * ยกเลิกทั้งหมด (รองรับทั้ง LINE และ Discord)
+     */
+    public void cancelAll(String userId, String targetId, String platform) {
         var crops = repo.findByUserId(userId);
         repo.deleteAll(crops);
-        lineService.reply(replyToken, "🗑 ลบทั้งหมดแล้ว");
+        if ("LINE".equals(platform)) {
+            lineService.reply(targetId, "🗑 ลบทั้งหมดแล้ว");
+        } else {
+            discordService.sendMessage(targetId, "🗑 ลบทั้งหมดแล้ว");
+        }
+    }
+
+    /**
+     * Overload - สำหรับ LINE (backward compatibility)
+     */
+    public void cancelAll(String userId, String replyToken) {
+        cancelAll(userId, replyToken, "LINE");
     }
 
 }

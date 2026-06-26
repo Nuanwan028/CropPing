@@ -1,0 +1,44 @@
+# Application Configuration Template
+# คัดลอกไฟล์นี้เป็น application.properties แล้วใส่ค่าจริงของคุณ
+# Copy this file to application.properties and fill in your actual values
+
+spring.application.name=CropPing
+
+# Database (H2 - in memory)
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=update
+
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2
+
+# Server Port
+server.port=${PORT:8080}
+
+# ========================================
+# LINE Bot Configuration (optional)
+# ========================================
+# Get from: https://developers.line.biz/console/
+line.channel.token=YOUR_LINE_CHANNEL_TOKEN_HERE
+line.channel.secret=YOUR_LINE_CHANNEL_SECRET_HERE
+
+# ========================================
+# Discord Bot Configuration
+# ========================================
+# Get from: https://discord.com/developers/applications
+# Step 1: Create Application → Bot → Copy Token
+# Step 2: General Information → Copy Application ID
+discord.bot.token=YOUR_DISCORD_BOT_TOKEN_HERE
+discord.application.id=YOUR_DISCORD_APPLICATION_ID_HERE
+
+# ========================================
+# Environment Variables (Recommended)
+# ========================================
+# Instead of hardcoding, use environment variables:
+# export LINE_TOKEN=your_token
+# export DISCORD_BOT_TOKEN=your_token
+# export DISCORD_APPLICATION_ID=your_app_id

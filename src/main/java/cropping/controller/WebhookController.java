@@ -62,7 +62,7 @@ public class WebhookController {
                     return ResponseEntity.ok().build();
                 }
 
-                cropService.handleUserMessage(userId, text, replyToken);
+                cropService.handleUserMessageLine(userId, text, replyToken);
             }
 
         }
