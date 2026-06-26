@@ -23,3 +23,9 @@ out/
 
 # OS files
 .DS_Store
+
+# Sensitive config - contains API keys, tokens
+src/main/resources/application.properties
+
+# Keep template but ignore actual config
+!src/main/resources/application.properties.template
