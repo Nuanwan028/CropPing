@@ -71,8 +71,8 @@ public class CropService {
 
         repo.save(crop);
 
-        // schedule
-        scheduler.scheduleNotification(userId, message, harvestTime.toLocalDateTime(), earlyTime.toLocalDateTime());
+        // schedule notification
+        scheduler.scheduleNotification(userId, replyToken, message, harvestTime.toLocalDateTime(), earlyTime.toLocalDateTime());
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
