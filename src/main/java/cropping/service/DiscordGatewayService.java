@@ -245,9 +245,11 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String commandName = dataNode.get("name").asText();
 
-            // Process command synchronously and send immediate response
-            String responseMessage = processCommandSync(commandName, userId, channelId, dataNode);
-            sendInteractionResponse(token, createMessageResponse(responseMessage));
+            // Send deferred response immediately (ACK within 3 seconds)
+            sendInteractionResponse(token, createDeferredResponse());
+
+            // Process command asynchronously
+            processCommandAsync(commandName, userId, channelId, dataNode, token);
             return;
         }
 
@@ -256,50 +258,61 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String customId = dataNode.get("custom_id").asText();
 
-            String responseMessage = processButtonClickSync(customId, userId, channelId);
-            sendInteractionResponse(token, createMessageResponse(responseMessage));
+            // Send deferred response immediately
+            sendInteractionResponse(token, createDeferredResponse());
+
+            // Process button click asynchronously
+            processButtonClickAsync(customId, userId, channelId, token);
             return;
         }
     }
 
     /**
-     * Process command synchronously and return response message
+     * Process command asynchronously and edit the original response
      */
-    private String processCommandSync(String commandName, String userId, String channelId, JsonNode data) {
+    @Async
+    protected void processCommandAsync(String commandName, String userId, String channelId, JsonNode data, String token) {
         try {
+            String resultMessage;
             switch (commandName) {
                 case "plant":
-                    return handlePlantCommand(userId, channelId, data);
+                    resultMessage = handlePlantCommandAsync(userId, channelId, data);
+                    break;
                 case "list":
-                    return handleListCommand(userId, channelId);
+                    resultMessage = handleListCommandAsync(userId, channelId);
+                    break;
                 case "cancel":
-                    return handleCancelCommand(userId, channelId, data);
+                    resultMessage = handleCancelCommandAsync(userId, channelId, data);
+                    break;
                 case "cancel_all":
-                    return handleCancelAllCommand(userId, channelId);
+                    resultMessage = handleCancelAllCommandAsync(userId, channelId);
+                    break;
                 default:
-                    return "❌ ไม่รู้จักคำสั่งนี้";
+                    resultMessage = "❌ ไม่รู้จักคำสั่งนี้";
             }
+            // Edit the original response instead of sending follow-up
+            editOriginalResponse(token, resultMessage);
         } catch (Exception e) {
             logger.error("Error processing command: {}", commandName, e);
-            return "❌ เกิดข้อผิดพลาด";
+            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
         }
     }
 
     /**
-     * Process button click synchronously and return response message
+     * Process button click asynchronously and edit the original response
      */
-    private String processButtonClickSync(String customId, String userId, String channelId) {
+    @Async
+    protected void processButtonClickAsync(String customId, String userId, String channelId, String token) {
         try {
             cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
-            return "✅ กำลังปลูก " + getCropDisplayName(customId) + "...";
+            editOriginalResponse(token, "✅ กำลังปลูก " + getCropDisplayName(customId) + "...");
         } catch (Exception e) {
             logger.error("Error processing button click", e);
-            return "❌ เกิดข้อผิดพลาด";
+            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
         }
     }
 
-    private String handlePlantCommand(String userId, String channelId, JsonNode data) {
-        // Check if has argument
+    private String handlePlantCommandAsync(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             String cropName = data.get("options").get(0).get("value").asText();
             cropService.handleUserMessage(userId, cropName, channelId, "DISCORD");
@@ -310,12 +323,12 @@ public class DiscordGatewayService {
         }
     }
 
-    private String handleListCommand(String userId, String channelId) {
+    private String handleListCommandAsync(String userId, String channelId) {
         cropService.handleList(userId, channelId, "DISCORD");
-        return "📋 กำลังดึงรายการพืช...";
+        return "📋 ดึงรายการพืชเรียบร้อย";
     }
 
-    private String handleCancelCommand(String userId, String channelId, JsonNode data) {
+    private String handleCancelCommandAsync(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             Long id = data.get("options").get(0).get("value").asLong();
             cropService.cancelCrop(id, channelId, "DISCORD");
@@ -325,7 +338,7 @@ public class DiscordGatewayService {
         }
     }
 
-    private String handleCancelAllCommand(String userId, String channelId) {
+    private String handleCancelAllCommandAsync(String userId, String channelId) {
         cropService.cancelAll(userId, channelId, "DISCORD");
         return "🗑️ ลบทั้งหมดแล้ว";
     }
@@ -481,6 +494,38 @@ public class DiscordGatewayService {
             }
         } catch (Exception e) {
             logger.error("Error sending follow-up message", e);
+        }
+    }
+
+    /**
+     * แก้ไขข้อความเดิม (หลังจากใช้ Deferred Response)
+     * URL: /webhooks/{applicationId}/{interactionToken}/messages/@original
+     */
+    private void editOriginalResponse(String interactionToken, String message) {
+        try {
+            String url = "https://discord.com/api/v10/webhooks/" + applicationId + "/" + interactionToken + "/messages/@original";
+
+            ObjectNode payload = objectMapper.createObjectNode();
+            payload.put("content", message);
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bot " + botToken)
+                    .addHeader("Content-Type", "application/json")
+                    .patch(okhttp3.RequestBody.create(payload.toString(),
+                            okhttp3.MediaType.parse("application/json")))
+                    .build();
+
+            try (Response httpResponse = httpClient.newCall(request).execute()) {
+                if (!httpResponse.isSuccessful()) {
+                    String errorBody = httpResponse.body() != null ? httpResponse.body().string() : "no body";
+                    logger.error("Edit original response failed: {} - Error: {}", httpResponse.code(), errorBody);
+                } else {
+                    logger.debug("Edit original response successful");
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error editing original response", e);
         }
     }
 
