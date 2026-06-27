@@ -317,42 +317,6 @@ public class DiscordGatewayService {
         }
     }
 
-    /**
-     * Process command synchronously and return response message
-     */
-    private String processCommandSync(String commandName, String userId, String channelId, JsonNode data) {
-        try {
-            switch (commandName) {
-                case "plant":
-                    return handlePlantCommandAsync(userId, channelId, data);
-                case "list":
-                    return handleListCommandAsync(userId, channelId);
-                case "cancel":
-                    return handleCancelCommandAsync(userId, channelId, data);
-                case "cancel_all":
-                    return handleCancelAllCommandAsync(userId, channelId);
-                default:
-                    return "❌ ไม่รู้จักคำสั่งนี้";
-            }
-        } catch (Exception e) {
-            logger.error("Error processing command: {}", commandName, e);
-            return "❌ เกิดข้อผิดพลาด";
-        }
-    }
-
-    /**
-     * Process button click synchronously and return response message
-     */
-    private String processButtonClickSync(String customId, String userId, String channelId) {
-        try {
-            cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
-            return "✅ กำลังปลูก " + getCropDisplayName(customId) + "...";
-        } catch (Exception e) {
-            logger.error("Error processing button click", e);
-            return "❌ เกิดข้อผิดพลาด";
-        }
-    }
-
     private void handlePlantCommandAsync(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             String cropName = data.get("options").get(0).get("value").asText();
