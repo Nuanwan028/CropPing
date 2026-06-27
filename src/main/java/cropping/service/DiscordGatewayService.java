@@ -272,49 +272,48 @@ public class DiscordGatewayService {
     }
 
     /**
-     * Process command asynchronously and edit the original response
+     * Process command asynchronously - send messages to channel directly
      */
     @Async
     protected void processCommandAsync(String commandName, String userId, String channelId, JsonNode data, String token) {
         try {
             logger.info("Async processing command: {} started", commandName);
-            String resultMessage;
             switch (commandName) {
                 case "plant":
-                    resultMessage = handlePlantCommandAsync(userId, channelId, data);
+                    handlePlantCommandAsync(userId, channelId, data);
                     break;
                 case "list":
-                    resultMessage = handleListCommandAsync(userId, channelId);
+                    handleListCommandAsync(userId, channelId);
                     break;
                 case "cancel":
-                    resultMessage = handleCancelCommandAsync(userId, channelId, data);
+                    handleCancelCommandAsync(userId, channelId, data);
                     break;
                 case "cancel_all":
-                    resultMessage = handleCancelAllCommandAsync(userId, channelId);
+                    handleCancelAllCommandAsync(userId, channelId);
                     break;
                 default:
-                    resultMessage = "❌ ไม่รู้จักคำสั่งนี้";
+                    discordService.sendMessage(channelId, "❌ ไม่รู้จักคำสั่งนี้");
             }
-            logger.info("Async processing command: {} completed, editing response", commandName);
-            // Edit the original response instead of sending follow-up
-            editOriginalResponse(token, resultMessage);
+            logger.info("Async processing command: {} completed", commandName);
+            // Note: Not editing interaction response since it fails - messages are sent via discordService instead
         } catch (Exception e) {
             logger.error("Error processing command: {}", commandName, e);
-            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
+            discordService.sendMessage(channelId, "❌ เกิดข้อผิดพลาด");
         }
     }
 
     /**
-     * Process button click asynchronously and edit the original response
+     * Process button click asynchronously - send messages to channel directly
      */
     @Async
     protected void processButtonClickAsync(String customId, String userId, String channelId, String token) {
         try {
             cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
-            editOriginalResponse(token, "✅ กำลังปลูก " + getCropDisplayName(customId) + "...");
+            logger.info("Button click processed: {}", customId);
+            // Note: Not editing interaction response - messages are sent via discordService
         } catch (Exception e) {
             logger.error("Error processing button click", e);
-            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
+            discordService.sendMessage(channelId, "❌ เกิดข้อผิดพลาด");
         }
     }
 
@@ -354,35 +353,30 @@ public class DiscordGatewayService {
         }
     }
 
-    private String handlePlantCommandAsync(String userId, String channelId, JsonNode data) {
+    private void handlePlantCommandAsync(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             String cropName = data.get("options").get(0).get("value").asText();
             cropService.handleUserMessage(userId, cropName, channelId, "DISCORD");
-            return "✅ กำลังปลูก...";
         } else {
             discordService.sendPlantMenu(channelId);
-            return "🌱 เลือกพืชที่จะปลูก:";
         }
     }
 
-    private String handleListCommandAsync(String userId, String channelId) {
+    private void handleListCommandAsync(String userId, String channelId) {
         cropService.handleList(userId, channelId, "DISCORD");
-        return "📋 ดึงรายการพืชเรียบร้อย";
     }
 
-    private String handleCancelCommandAsync(String userId, String channelId, JsonNode data) {
+    private void handleCancelCommandAsync(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             Long id = data.get("options").get(0).get("value").asLong();
             cropService.cancelCrop(id, channelId, "DISCORD");
-            return "❌ ยกเลิกเรียบร้อย";
         } else {
-            return "❌ กรุณาระบุ ID พืช";
+            discordService.sendMessage(channelId, "❌ กรุณาระบุ ID พืช");
         }
     }
 
-    private String handleCancelAllCommandAsync(String userId, String channelId) {
+    private void handleCancelAllCommandAsync(String userId, String channelId) {
         cropService.cancelAll(userId, channelId, "DISCORD");
-        return "🗑️ ลบทั้งหมดแล้ว";
     }
 
     /**
