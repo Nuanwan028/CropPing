@@ -58,6 +58,9 @@ public class DiscordGatewayService {
     @Async
     public void connect() {
         try {
+            logger.info("Discord Bot Token: {}...", botToken.substring(0, Math.min(20, botToken.length())));
+            logger.info("Discord Application ID: {}", applicationId);
+
             // 1. Get Gateway URL (with bot params)
             String gatewayUrl = getGatewayUrl();
             logger.info("Connecting to Discord Gateway: {}", gatewayUrl);
@@ -465,6 +468,8 @@ public class DiscordGatewayService {
         try {
             // Correct URL format: /interactions/{applicationId}/{interactionToken}/callback
             String url = "https://discord.com/api/v10/interactions/" + applicationId + "/" + interactionToken + "/callback";
+            logger.debug("Sending interaction response to: {}", url);
+            logger.debug("Response body: {}", response.toString());
 
             Request request = new Request.Builder()
                     .url(url)
@@ -476,7 +481,10 @@ public class DiscordGatewayService {
 
             try (Response httpResponse = httpClient.newCall(request).execute()) {
                 if (!httpResponse.isSuccessful()) {
-                    logger.error("Interaction response failed: {}", httpResponse.code());
+                    String errorBody = httpResponse.body() != null ? httpResponse.body().string() : "no body";
+                    logger.error("Interaction response failed: {} - URL: {} - Error: {}", httpResponse.code(), url, errorBody);
+                } else {
+                    logger.debug("Interaction response successful");
                 }
             }
         } catch (Exception e) {
