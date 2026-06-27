@@ -204,13 +204,9 @@ public class DiscordGatewayService {
 
             case "APPLICATION_COMMAND":
             case "INTERACTION_CREATE":
-                // This is the slash command interaction
-                handleInteraction(data);
-                break;
-
             case "MESSAGE_COMPONENT":
-                // Button click
-                handleButtonInteraction(data);
+                // All interactions are handled here
+                handleInteraction(data);
                 break;
 
             default:
@@ -249,11 +245,9 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String commandName = dataNode.get("name").asText();
 
-            // Return ACK first (type 5 = DEFERRED)
-            sendInteractionResponse(token, createDeferredResponse());
-
-            // Process command asynchronously
-            processCommand(commandName, userId, channelId, dataNode, token);
+            // Process command synchronously and send immediate response
+            String responseMessage = processCommandSync(commandName, userId, channelId, dataNode);
+            sendInteractionResponse(token, createMessageResponse(responseMessage));
             return;
         }
 
@@ -262,108 +256,78 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String customId = dataNode.get("custom_id").asText();
 
-            sendInteractionResponse(token, createDeferredResponse());
-            processButtonClick(customId, userId, channelId, token);
+            String responseMessage = processButtonClickSync(customId, userId, channelId);
+            sendInteractionResponse(token, createMessageResponse(responseMessage));
             return;
         }
     }
 
     /**
-     * ปุ่มกด
+     * Process command synchronously and return response message
      */
-    private void handleButtonInteraction(JsonNode data) throws Exception {
-        String token = data.get("token").asText();
-        String channelId = data.get("channel_id").asText();
-
-        String userId = null;
-        if (data.has("member") && data.get("member").has("user")) {
-            userId = data.get("member").get("user").get("id").asText();
-        } else if (data.has("user")) {
-            userId = data.get("user").get("id").asText();
-        }
-
-        JsonNode dataNode = data.get("data");
-        String customId = dataNode.get("custom_id").asText();
-
-        logger.info("Button clicked - ID: {}, User: {}", customId, userId);
-
-        sendInteractionResponse(token, createDeferredResponse());
-        processButtonClick(customId, userId, channelId, token);
-    }
-
-    /**
-     * Process command asynchronously
-     */
-    @Async
-    protected void processCommand(String commandName, String userId, String channelId, JsonNode data, String token) {
+    private String processCommandSync(String commandName, String userId, String channelId, JsonNode data) {
         try {
-            Thread.sleep(100); // Small delay to ensure response is sent
-
             switch (commandName) {
                 case "plant":
-                    handlePlantCommand(userId, channelId, data, token);
-                    break;
+                    return handlePlantCommand(userId, channelId, data);
                 case "list":
-                    handleListCommand(userId, channelId, token);
-                    break;
+                    return handleListCommand(userId, channelId);
                 case "cancel":
-                    handleCancelCommand(userId, channelId, data, token);
-                    break;
+                    return handleCancelCommand(userId, channelId, data);
                 case "cancel_all":
-                    handleCancelAllCommand(userId, channelId, token);
-                    break;
+                    return handleCancelAllCommand(userId, channelId);
                 default:
-                    sendFollowupMessage(token, "❌ ไม่รู้จักคำสั่งนี้");
+                    return "❌ ไม่รู้จักคำสั่งนี้";
             }
         } catch (Exception e) {
             logger.error("Error processing command: {}", commandName, e);
+            return "❌ เกิดข้อผิดพลาด";
         }
     }
 
     /**
-     * Process button click asynchronously
+     * Process button click synchronously and return response message
      */
-    @Async
-    protected void processButtonClick(String customId, String userId, String channelId, String token) {
+    private String processButtonClickSync(String customId, String userId, String channelId) {
         try {
-            Thread.sleep(100);
             cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
-            sendFollowupMessage(token, "✅ กำลังปลูก " + getCropDisplayName(customId) + "...");
+            return "✅ กำลังปลูก " + getCropDisplayName(customId) + "...";
         } catch (Exception e) {
             logger.error("Error processing button click", e);
+            return "❌ เกิดข้อผิดพลาด";
         }
     }
 
-    private void handlePlantCommand(String userId, String channelId, JsonNode data, String token) {
+    private String handlePlantCommand(String userId, String channelId, JsonNode data) {
         // Check if has argument
         if (data.has("options") && data.get("options").size() > 0) {
             String cropName = data.get("options").get(0).get("value").asText();
             cropService.handleUserMessage(userId, cropName, channelId, "DISCORD");
-            sendFollowupMessage(token, "✅ กำลังปลูก...");
+            return "✅ กำลังปลูก...";
         } else {
             discordService.sendPlantMenu(channelId);
-            sendFollowupMessage(token, "🌱 เลือกพืชที่จะปลูก:");
+            return "🌱 เลือกพืชที่จะปลูก:";
         }
     }
 
-    private void handleListCommand(String userId, String channelId, String token) {
+    private String handleListCommand(String userId, String channelId) {
         cropService.handleList(userId, channelId, "DISCORD");
-        sendFollowupMessage(token, "📋 กำลังดึงรายการพืช...");
+        return "📋 กำลังดึงรายการพืช...";
     }
 
-    private void handleCancelCommand(String userId, String channelId, JsonNode data, String token) {
+    private String handleCancelCommand(String userId, String channelId, JsonNode data) {
         if (data.has("options") && data.get("options").size() > 0) {
             Long id = data.get("options").get(0).get("value").asLong();
             cropService.cancelCrop(id, channelId, "DISCORD");
-            sendFollowupMessage(token, "❌ ยกเลิกเรียบร้อย");
+            return "❌ ยกเลิกเรียบร้อย";
         } else {
-            sendFollowupMessage(token, "❌ กรุณาระบุ ID พืช");
+            return "❌ กรุณาระบุ ID พืช";
         }
     }
 
-    private void handleCancelAllCommand(String userId, String channelId, String token) {
+    private String handleCancelAllCommand(String userId, String channelId) {
         cropService.cancelAll(userId, channelId, "DISCORD");
-        sendFollowupMessage(token, "🗑️ ลบทั้งหมดแล้ว");
+        return "🗑️ ลบทั้งหมดแล้ว";
     }
 
     /**
@@ -535,6 +499,20 @@ public class DiscordGatewayService {
     private ObjectNode createDeferredResponse() {
         ObjectNode response = objectMapper.createObjectNode();
         response.put("type", 5); // DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        return response;
+    }
+
+    /**
+     * สร้าง Message Response (Type 4) - Immediate response with message
+     */
+    private ObjectNode createMessageResponse(String message) {
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("type", 4); // MESSAGE_WITH_SOURCE
+
+        // Add data with content
+        ObjectNode data = response.putObject("data");
+        data.put("content", message);
+
         return response;
     }
 
