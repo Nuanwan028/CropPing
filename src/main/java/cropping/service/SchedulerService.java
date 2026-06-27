@@ -49,23 +49,41 @@ public class SchedulerService {
 
         // เตือนก่อน (5 นาที)
         taskScheduler.schedule(() -> {
-            // LINE notification
-            lineService.push(userId, "⏰ อีก 5 นาที " + cropDisplay + " จะโต!");
+            // LINE notification - handle errors separately
+            try {
+                lineService.push(userId, "⏰ อีก 5 นาที " + cropDisplay + " จะโต!");
+            } catch (Exception e) {
+                // Log but don't prevent Discord notification
+                System.err.println("LINE notification failed (early): " + e.getMessage());
+            }
 
-            // Discord notification (ถ้ามี channelId)
+            // Discord notification (ถ้ามี channelId) - handle errors separately
             if (channelId != null && !channelId.isEmpty()) {
-                discordService.sendMessage(channelId, "⏰ อีก 5 นาที " + cropDisplay + " จะโต!");
+                try {
+                    discordService.sendMessage(channelId, "⏰ อีก 5 นาที " + cropDisplay + " จะโต!");
+                } catch (Exception e) {
+                    System.err.println("Discord notification failed (early): " + e.getMessage());
+                }
             }
         }, Date.from(early.atZone(ZONE).toInstant()));
 
         // เตือนจริง (ถึงเวลาเก็บเกี่ยว)
         taskScheduler.schedule(() -> {
-            // LINE notification
-            lineService.push(userId, "🌱 " + cropDisplay + " โตแล้ว! เก็บเกี่ยวได้แล้ว!");
+            // LINE notification - handle errors separately
+            try {
+                lineService.push(userId, "🌱 " + cropDisplay + " โตแล้ว! เก็บเกี่ยวได้แล้ว!");
+            } catch (Exception e) {
+                // Log but don't prevent Discord notification
+                System.err.println("LINE notification failed (harvest): " + e.getMessage());
+            }
 
-            // Discord notification (ถ้ามี channelId)
+            // Discord notification (ถ้ามี channelId) - handle errors separately
             if (channelId != null && !channelId.isEmpty()) {
-                discordService.sendMessage(channelId, "🌱 " + cropDisplay + " โตแล้ว! เก็บเกี่ยวได้แล้ว!");
+                try {
+                    discordService.sendMessage(channelId, "🌱 " + cropDisplay + " โตแล้ว! เก็บเกี่ยวได้แล้ว!");
+                } catch (Exception e) {
+                    System.err.println("Discord notification failed (harvest): " + e.getMessage());
+                }
             }
         }, Date.from(harvest.atZone(ZONE).toInstant()));
     }

@@ -219,6 +219,7 @@ public class DiscordGatewayService {
      */
     private void handleInteraction(JsonNode data) throws Exception {
         int type = data.get("type").asInt();
+        String interactionId = data.get("id").asText();
         String token = data.get("token").asText();
         String channelId = data.get("channel_id").asText();
 
@@ -236,7 +237,7 @@ public class DiscordGatewayService {
 
         // Type 1: PING
         if (type == 1) {
-            sendInteractionResponse(token, createPongResponse());
+            sendInteractionResponse(interactionId, token, createPongResponse());
             return;
         }
 
@@ -248,7 +249,7 @@ public class DiscordGatewayService {
             logger.info("Processing command: {} with deferred response", commandName);
 
             // CRITICAL: Send deferred response FIRST (within 3 seconds)
-            sendInteractionResponse(token, createDeferredResponse());
+            sendInteractionResponse(interactionId, token, createDeferredResponse());
 
             // Then process asynchronously (can take longer)
             processCommandAsync(commandName, userId, channelId, dataNode, token);
@@ -263,7 +264,7 @@ public class DiscordGatewayService {
             logger.info("Processing button click: {} with deferred response", customId);
 
             // CRITICAL: Send deferred response FIRST (within 3 seconds)
-            sendInteractionResponse(token, createDeferredResponse());
+            sendInteractionResponse(interactionId, token, createDeferredResponse());
 
             // Then process asynchronously
             processButtonClickAsync(customId, userId, channelId, token);
@@ -441,11 +442,11 @@ public class DiscordGatewayService {
     /**
      * ส่ง Interaction Response
      */
-    private void sendInteractionResponse(String interactionToken, ObjectNode response) {
+    private void sendInteractionResponse(String interactionId, String interactionToken, ObjectNode response) {
         long startTime = System.currentTimeMillis();
         try {
-            // Correct URL format: /interactions/{applicationId}/{interactionToken}/callback
-            String url = "https://discord.com/api/v10/interactions/" + applicationId + "/" + interactionToken + "/callback";
+            // Correct URL format: /interactions/{interactionId}/{interactionToken}/callback
+            String url = "https://discord.com/api/v10/interactions/" + interactionId + "/" + interactionToken + "/callback";
             logger.info("Sending interaction response to: {}", url);
             logger.debug("Response body: {}", response.toString());
 
