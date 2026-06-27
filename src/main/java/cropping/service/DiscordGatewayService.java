@@ -463,7 +463,8 @@ public class DiscordGatewayService {
      */
     private void sendInteractionResponse(String interactionToken, ObjectNode response) {
         try {
-            String url = "https://discord.com/api/v10/interactions/" + interactionToken + "/callback";
+            // Correct URL format: /interactions/{applicationId}/{interactionToken}/callback
+            String url = "https://discord.com/api/v10/interactions/" + applicationId + "/" + interactionToken + "/callback";
 
             Request request = new Request.Builder()
                     .url(url)
