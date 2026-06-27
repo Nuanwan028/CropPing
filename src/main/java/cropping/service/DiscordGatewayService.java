@@ -2,6 +2,7 @@ package cropping.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import cropping.entity.Crop;
 import cropping.repository.CropRepository;
@@ -667,7 +668,9 @@ public class DiscordGatewayService {
             ObjectNode body = objectMapper.createObjectNode();
             body.put("content", "🌱 เลือกพืชที่จะปลูก:");
 
-            ObjectNode embed = body.putObject("embeds").addArray().addObject();
+            // Add embed
+            ArrayNode embedsArray = body.putArray("embeds");
+            ObjectNode embed = embedsArray.addObject();
             embed.put("title", "ปลูกอะไรดี?");
             embed.put("description", "กดเลือกพืชที่คุณอยากปลูก");
             embed.put("color", 0x5865F2);
@@ -696,8 +699,8 @@ public class DiscordGatewayService {
     /**
      * Create plant menu components (action rows with buttons)
      */
-    private Object createPlantMenuComponents() {
-        ObjectNode components = objectMapper.createArrayNode();
+    private ArrayNode createPlantMenuComponents() {
+        ArrayNode components = objectMapper.createArrayNode();
 
         // Row 1: Fast growing crops
         components.add(createActionRow(
@@ -730,7 +733,7 @@ public class DiscordGatewayService {
     private ObjectNode createActionRow(ObjectNode... buttons) {
         ObjectNode row = objectMapper.createObjectNode();
         row.put("type", 1);
-        ObjectNode componentsArray = row.putArray("components");
+        ArrayNode componentsArray = row.putArray("components");
         for (ObjectNode button : buttons) {
             componentsArray.add(button);
         }
