@@ -245,6 +245,8 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String commandName = dataNode.get("name").asText();
 
+            logger.info("Processing command: {} with token: {}...", commandName, token.substring(0, Math.min(20, token.length())));
+
             // Send deferred response immediately (ACK within 3 seconds)
             sendInteractionResponse(token, createDeferredResponse());
 
@@ -257,6 +259,8 @@ public class DiscordGatewayService {
         if (type == 3) {
             JsonNode dataNode = data.get("data");
             String customId = dataNode.get("custom_id").asText();
+
+            logger.info("Processing button click: {} with token: {}...", customId, token.substring(0, Math.min(20, token.length())));
 
             // Send deferred response immediately
             sendInteractionResponse(token, createDeferredResponse());
@@ -273,6 +277,7 @@ public class DiscordGatewayService {
     @Async
     protected void processCommandAsync(String commandName, String userId, String channelId, JsonNode data, String token) {
         try {
+            logger.info("Async processing command: {} started", commandName);
             String resultMessage;
             switch (commandName) {
                 case "plant":
@@ -290,6 +295,7 @@ public class DiscordGatewayService {
                 default:
                     resultMessage = "❌ ไม่รู้จักคำสั่งนี้";
             }
+            logger.info("Async processing command: {} completed, editing response", commandName);
             // Edit the original response instead of sending follow-up
             editOriginalResponse(token, resultMessage);
         } catch (Exception e) {
