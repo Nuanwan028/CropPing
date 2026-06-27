@@ -330,7 +330,7 @@ public class DiscordService {
     private HttpHeaders getHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(botToken);
+        headers.set("Authorization", "Bot " + botToken); // Discord requires "Bot" prefix, not "Bearer"
         headers.set("User-Agent", "DiscordBot (https://github.com, 1.0)");
         return headers;
     }
