@@ -252,26 +252,19 @@ public class DiscordService {
 
         List<Map<String, Object>> commands = new ArrayList<>();
 
-        // /plant command
-        commands.add(Map.of(
-                "name", "plant",
-                "description", "เปิดเมนูเลือกพืชที่จะปลูก",
-                "type", 1 // CHAT_INPUT
-        ));
-
-        // /plant <crop> command
-        Map<String, Object> plantWithArg = new HashMap<>();
-        plantWithArg.put("name", "plant");
-        plantWithArg.put("description", "ปลูกพืชที่ต้องการ");
-        plantWithArg.put("type", 1);
-        plantWithArg.put("options", List.of(Map.of(
+        // /plant <crop> command (single command with optional argument)
+        Map<String, Object> plantCommand = new HashMap<>();
+        plantCommand.put("name", "plant");
+        plantCommand.put("description", "ปลูกพืช - ไม่ใส่ค่าจะเปิดเมนูเลือก, ใส่ชื่อพืชจะปลูกเลย");
+        plantCommand.put("type", 1);
+        plantCommand.put("options", List.of(Map.of(
                 "type", 3, // STRING
                 "name", "crop",
-                "description", "ชื่อพืช เช่น paddy, tomato, corn",
-                "required", true,
+                "description", "ชื่อพืช เช่น paddy, tomato, corn (เว้นว่างเพื่อเปิดเมนู)",
+                "required", false, // Changed to false - allow both with and without argument
                 "choices", getCropChoices()
         )));
-        commands.add(plantWithArg);
+        commands.add(plantCommand);
 
         // /list command
         commands.add(Map.of(
