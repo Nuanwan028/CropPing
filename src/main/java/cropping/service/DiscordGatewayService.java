@@ -3,6 +3,8 @@ package cropping.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import cropping.entity.Crop;
+import cropping.repository.CropRepository;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +14,11 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,6 +30,7 @@ public class DiscordGatewayService {
 
     private static final Logger logger = LoggerFactory.getLogger(DiscordGatewayService.class);
     private static final String GATEWAY_URL = "wss://gateway.discord.gg";
+    private static final ZoneId ZONE = ZoneId.of("Asia/Bangkok");
 
     @Value("${discord.bot.token}")
     private String botToken;
@@ -34,6 +42,8 @@ public class DiscordGatewayService {
     private final ObjectMapper objectMapper;
     private final CropService cropService;
     private final DiscordService discordService;
+    private final CropRepository cropRepository;
+    private final SchedulerService schedulerService;
 
     private WebSocket webSocket;
     private volatile boolean isConnected = false;
@@ -42,9 +52,12 @@ public class DiscordGatewayService {
     private volatile String sessionId = null;
     private volatile int sequenceNumber = 0;
 
-    public DiscordGatewayService(CropService cropService, DiscordService discordService) {
+    public DiscordGatewayService(CropService cropService, DiscordService discordService,
+                                  CropRepository cropRepository, SchedulerService schedulerService) {
         this.cropService = cropService;
         this.discordService = discordService;
+        this.cropRepository = cropRepository;
+        this.schedulerService = schedulerService;
         this.objectMapper = new ObjectMapper();
         this.httpClient = new OkHttpClient.Builder()
                 .readTimeout(0, TimeUnit.MILLISECONDS) // No timeout for WebSocket
@@ -273,7 +286,7 @@ public class DiscordGatewayService {
     }
 
     /**
-     * Process command asynchronously - send messages to channel directly
+     * Process command asynchronously - edit original response
      */
     @Async
     protected void processCommandAsync(String commandName, String userId, String channelId, JsonNode data, String token) {
@@ -281,67 +294,140 @@ public class DiscordGatewayService {
             logger.info("Async processing command: {} started", commandName);
             switch (commandName) {
                 case "plant":
-                    handlePlantCommandAsync(userId, channelId, data);
+                    handlePlantCommandAsync(userId, channelId, data, token);
                     break;
                 case "list":
-                    handleListCommandAsync(userId, channelId);
+                    handleListCommandAsync(userId, channelId, token);
                     break;
                 case "cancel":
-                    handleCancelCommandAsync(userId, channelId, data);
+                    handleCancelCommandAsync(userId, channelId, data, token);
                     break;
                 case "cancel_all":
-                    handleCancelAllCommandAsync(userId, channelId);
+                    handleCancelAllCommandAsync(userId, channelId, token);
                     break;
                 default:
-                    discordService.sendMessage(channelId, "❌ ไม่รู้จักคำสั่งนี้");
+                    editOriginalResponse(token, "❌ ไม่รู้จักคำสั่งนี้");
             }
             logger.info("Async processing command: {} completed", commandName);
-            // Note: Not editing interaction response since it fails - messages are sent via discordService instead
         } catch (Exception e) {
             logger.error("Error processing command: {}", commandName, e);
-            discordService.sendMessage(channelId, "❌ เกิดข้อผิดพลาด");
+            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
         }
     }
 
     /**
-     * Process button click asynchronously - send messages to channel directly
+     * Process button click asynchronously - edit original response
      */
     @Async
     protected void processButtonClickAsync(String customId, String userId, String channelId, String token) {
         try {
-            cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
+            // Validate crop
+            if (!isValidCrop(customId)) {
+                editOriginalResponse(token, "❌ ไม่รู้จักพืชนี้");
+                return;
+            }
+
+            // Get crop info for response
+            String cropDisplay = getCropDisplayName(customId);
+            int growTime = getGrowTime(customId);
+            ZonedDateTime now = ZonedDateTime.now(ZONE);
+            ZonedDateTime harvestTime = now.plusMinutes(growTime);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+            String harvestTimeStr = harvestTime.format(formatter);
+
+            // Save to database and schedule notifications
+            saveCropAndSchedule(userId, channelId, customId);
+
+            // Edit the deferred response with success message
+            String message = String.format(
+                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก **%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
+                cropDisplay, harvestTimeStr
+            );
+            editOriginalResponse(token, message);
             logger.info("Button click processed: {}", customId);
-            // Note: Not editing interaction response - messages are sent via discordService
         } catch (Exception e) {
             logger.error("Error processing button click", e);
-            discordService.sendMessage(channelId, "❌ เกิดข้อผิดพลาด");
+            editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
         }
     }
 
-    private void handlePlantCommandAsync(String userId, String channelId, JsonNode data) {
+    private void handlePlantCommandAsync(String userId, String channelId, JsonNode data, String token) {
         if (data.has("options") && data.get("options").size() > 0) {
+            // Direct plant with crop name
             String cropName = data.get("options").get(0).get("value").asText();
-            cropService.handleUserMessage(userId, cropName, channelId, "DISCORD");
+
+            if (!isValidCrop(cropName)) {
+                editOriginalResponse(token, "❌ ไม่รู้จักพืชนี้");
+                return;
+            }
+
+            String cropDisplay = getCropDisplayName(cropName);
+            int growTime = getGrowTime(cropName);
+            ZonedDateTime now = ZonedDateTime.now(ZONE);
+            ZonedDateTime harvestTime = now.plusMinutes(growTime);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+            String harvestTimeStr = harvestTime.format(formatter);
+
+            // Save to database and schedule notifications
+            saveCropAndSchedule(userId, channelId, cropName);
+
+            // Edit response with success message
+            String message = String.format(
+                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก **%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
+                cropDisplay, harvestTimeStr
+            );
+            editOriginalResponse(token, message);
         } else {
-            discordService.sendPlantMenu(channelId);
+            // No argument - show plant menu via follow-up (can't edit with buttons)
+            sendPlantMenuFollowup(token);
         }
     }
 
-    private void handleListCommandAsync(String userId, String channelId) {
-        cropService.handleList(userId, channelId, "DISCORD");
+    private void handleListCommandAsync(String userId, String channelId, String token) {
+        var crops = cropRepository.findByUserId(userId);
+        ZonedDateTime now = ZonedDateTime.now(ZONE);
+
+        // Filter active crops
+        var activeCrops = crops.stream()
+                .filter(c -> c.getHarvestTime().isAfter(now.toLocalDateTime()))
+                .toList();
+
+        // Delete expired crops
+        var expiredCrops = crops.stream()
+                .filter(c -> !c.getHarvestTime().isAfter(now.toLocalDateTime()))
+                .toList();
+        if (!expiredCrops.isEmpty()) {
+            cropRepository.deleteAll(expiredCrops);
+        }
+
+        if (activeCrops.isEmpty()) {
+            editOriginalResponse(token, "📭 ไม่มีพืชที่ปลูกอยู่");
+        } else {
+            StringBuilder sb = new StringBuilder("📋 รายการพืชที่ปลูก\n\n");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
+            for (var crop : activeCrops) {
+                String displayName = getCropDisplayName(crop.getCropName());
+                sb.append(String.format("%s\n⏱ %s | ID: `%d`\n\n",
+                    displayName, crop.getHarvestTime().format(formatter), crop.getId()));
+            }
+            editOriginalResponse(token, sb.toString());
+        }
     }
 
-    private void handleCancelCommandAsync(String userId, String channelId, JsonNode data) {
+    private void handleCancelCommandAsync(String userId, String channelId, JsonNode data, String token) {
         if (data.has("options") && data.get("options").size() > 0) {
             Long id = data.get("options").get(0).get("value").asLong();
-            cropService.cancelCrop(id, channelId, "DISCORD");
+            cropRepository.deleteById(id);
+            editOriginalResponse(token, "❌ ยกเลิกเรียบร้อย");
         } else {
-            discordService.sendMessage(channelId, "❌ กรุณาระบุ ID พืช");
+            editOriginalResponse(token, "❌ กรุณาระบุ ID พืช");
         }
     }
 
-    private void handleCancelAllCommandAsync(String userId, String channelId) {
-        cropService.cancelAll(userId, channelId, "DISCORD");
+    private void handleCancelAllCommandAsync(String userId, String channelId, String token) {
+        var crops = cropRepository.findByUserId(userId);
+        cropRepository.deleteAll(crops);
+        editOriginalResponse(token, "🗑 ลบทั้งหมมดแล้ว");
     }
 
     /**
@@ -566,6 +652,119 @@ public class DiscordGatewayService {
     }
 
     /**
+     * Send plant menu as follow-up message
+     */
+    private void sendPlantMenuFollowup(String interactionToken) {
+        try {
+            String url = "https://discord.com/api/v10/webhooks/" + applicationId + "/" + interactionToken;
+
+            ObjectNode body = objectMapper.createObjectNode();
+            body.put("content", "🌱 เลือกพืชที่จะปลูก:");
+
+            ObjectNode embed = body.putObject("embeds").addArray().addObject();
+            embed.put("title", "ปลูกอะไรดี?");
+            embed.put("description", "กดเลือกพืชที่คุณอยากปลูก");
+            embed.put("color", 0x5865F2);
+
+            // Add action rows with buttons
+            body.set("components", createPlantMenuComponents());
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bot " + botToken)
+                    .addHeader("Content-Type", "application/json")
+                    .post(okhttp3.RequestBody.create(body.toString(),
+                            okhttp3.MediaType.parse("application/json")))
+                    .build();
+
+            try (Response httpResponse = httpClient.newCall(request).execute()) {
+                if (!httpResponse.isSuccessful()) {
+                    logger.error("Send plant menu follow-up failed: {}", httpResponse.code());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error sending plant menu follow-up", e);
+        }
+    }
+
+    /**
+     * Create plant menu components (action rows with buttons)
+     */
+    private Object createPlantMenuComponents() {
+        ObjectNode components = objectMapper.createArrayNode();
+
+        // Row 1: Fast growing crops
+        components.add(createActionRow(
+                createButton("paddy", "🌾 ข้าว", 1),
+                createButton("tomato", "🍅 มะเขือเทศ", 1),
+                createButton("corn", "🌽 ข้าวโพด", 1),
+                createButton("pineapple", "🍍 สับปะรด", 1),
+                createButton("tea", "🍃 ชา", 1)
+        ));
+
+        // Row 2: Medium crops
+        components.add(createActionRow(
+                createButton("wheat", "🌾 ข้าวสาลี", 1),
+                createButton("potato", "🥔 มันฝรั่ง", 1),
+                createButton("carrot", "🥕 แครอท", 1),
+                createButton("lettuce", "🥬 ผักกาด", 1)
+        ));
+
+        // Row 3: Long crops
+        components.add(createActionRow(
+                createButton("grape", "🍇 องุ่น", 1),
+                createButton("strawberry", "🍓 สตรอว์เบอร์รี่", 1),
+                createButton("avocado", "🥑 อะโวคาโด", 1),
+                createButton("cacao", "🍫 โกโก้", 1)
+        ));
+
+        return components;
+    }
+
+    private ObjectNode createActionRow(ObjectNode... buttons) {
+        ObjectNode row = objectMapper.createObjectNode();
+        row.put("type", 1);
+        ObjectNode componentsArray = row.putArray("components");
+        for (ObjectNode button : buttons) {
+            componentsArray.add(button);
+        }
+        return row;
+    }
+
+    private ObjectNode createButton(String customId, String label, int style) {
+        ObjectNode button = objectMapper.createObjectNode();
+        button.put("type", 2);
+        button.put("style", style);
+        button.put("custom_id", customId);
+        button.put("label", label);
+        return button;
+    }
+
+    /**
+     * Save crop to database and schedule notifications
+     */
+    private void saveCropAndSchedule(String userId, String channelId, String cropName) {
+        int growTime = getGrowTime(cropName);
+        ZonedDateTime now = ZonedDateTime.now(ZONE);
+        ZonedDateTime harvestTime = now.plusMinutes(growTime);
+        ZonedDateTime earlyTime = harvestTime.minusMinutes(5);
+
+        Crop crop = new Crop();
+        crop.setUserId(userId);
+        crop.setCropName(cropName);
+        crop.setPlantTime(now.toLocalDateTime());
+        crop.setHarvestTime(harvestTime.toLocalDateTime());
+        crop.setNotifyEarly(true);
+        crop.setType("crop");
+
+        cropRepository.save(crop);
+
+        // Schedule notifications
+        schedulerService.scheduleNotification(userId, channelId, cropName,
+                harvestTime.toLocalDateTime(), earlyTime.toLocalDateTime());
+    }
+
+    /**
      * Schedule reconnect with delay
      */
     private void scheduleReconnect(long delay) {
@@ -590,6 +789,34 @@ public class DiscordGatewayService {
         if (webSocket != null) {
             webSocket.close(1000, "Application shutting down");
         }
+    }
+
+    private boolean isValidCrop(String crop) {
+        return switch (crop.toLowerCase()) {
+            case "tomato", "pineapple", "paddy", "potato", "carrot", "wheat", "strawberry", "eggplant", "lettuce",
+                    "grape", "corn", "tea", "cacao", "avocado" -> true;
+            default -> false;
+        };
+    }
+
+    private int getGrowTime(String crop) {
+        return switch (crop.toLowerCase()) {
+            case "tomato" -> 15;
+            case "paddy" -> 20;
+            case "pineapple" -> 30;
+            case "tea" -> 45;
+            case "potato" -> 60;
+            case "carrot" -> 120;
+            case "wheat" -> 240;
+            case "cacao" -> 300;
+            case "strawberry" -> 360;
+            case "eggplant" -> 420;
+            case "lettuce" -> 480;
+            case "grape" -> 600;
+            case "corn" -> 720;
+            case "avocado" -> 840;
+            default -> 0;
+        };
     }
 
     private String getCropDisplayName(String cropName) {
