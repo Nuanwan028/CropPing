@@ -245,11 +245,13 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String commandName = dataNode.get("name").asText();
 
-            logger.info("Processing command: {} synchronously", commandName);
+            logger.info("Processing command: {} with deferred response", commandName);
 
-            // Process command synchronously and send immediate response
-            String resultMessage = processCommandSync(commandName, userId, channelId, dataNode);
-            sendInteractionResponse(token, createMessageResponse(resultMessage));
+            // CRITICAL: Send deferred response FIRST (within 3 seconds)
+            sendInteractionResponse(token, createDeferredResponse());
+
+            // Then process asynchronously (can take longer)
+            processCommandAsync(commandName, userId, channelId, dataNode, token);
             return;
         }
 
@@ -258,11 +260,13 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String customId = dataNode.get("custom_id").asText();
 
-            logger.info("Processing button click: {} synchronously", customId);
+            logger.info("Processing button click: {} with deferred response", customId);
 
-            // Process button click synchronously and send immediate response
-            String resultMessage = processButtonClickSync(customId, userId, channelId);
-            sendInteractionResponse(token, createMessageResponse(resultMessage));
+            // CRITICAL: Send deferred response FIRST (within 3 seconds)
+            sendInteractionResponse(token, createDeferredResponse());
+
+            // Then process asynchronously
+            processButtonClickAsync(customId, userId, channelId, token);
             return;
         }
     }
@@ -480,10 +484,11 @@ public class DiscordGatewayService {
      * ส่ง Interaction Response
      */
     private void sendInteractionResponse(String interactionToken, ObjectNode response) {
+        long startTime = System.currentTimeMillis();
         try {
             // Correct URL format: /interactions/{applicationId}/{interactionToken}/callback
             String url = "https://discord.com/api/v10/interactions/" + applicationId + "/" + interactionToken + "/callback";
-            logger.debug("Sending interaction response to: {}", url);
+            logger.info("Sending interaction response to: {}", url);
             logger.debug("Response body: {}", response.toString());
 
             Request request = new Request.Builder()
@@ -495,15 +500,17 @@ public class DiscordGatewayService {
                     .build();
 
             try (Response httpResponse = httpClient.newCall(request).execute()) {
+                long duration = System.currentTimeMillis() - startTime;
                 if (!httpResponse.isSuccessful()) {
                     String errorBody = httpResponse.body() != null ? httpResponse.body().string() : "no body";
-                    logger.error("Interaction response failed: {} - URL: {} - Error: {}", httpResponse.code(), url, errorBody);
+                    logger.error("Interaction response failed in {}ms - {} - Error: {}", duration, httpResponse.code(), errorBody);
                 } else {
-                    logger.debug("Interaction response successful");
+                    logger.info("Interaction response successful in {}ms", duration);
                 }
             }
         } catch (Exception e) {
-            logger.error("Error sending interaction response", e);
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("Error sending interaction response after {}ms", duration, e);
         }
     }
 
