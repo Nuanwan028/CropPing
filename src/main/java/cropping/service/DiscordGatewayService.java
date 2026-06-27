@@ -245,13 +245,11 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String commandName = dataNode.get("name").asText();
 
-            logger.info("Processing command: {} with token: {}...", commandName, token.substring(0, Math.min(20, token.length())));
+            logger.info("Processing command: {} synchronously", commandName);
 
-            // Send deferred response immediately (ACK within 3 seconds)
-            sendInteractionResponse(token, createDeferredResponse());
-
-            // Process command asynchronously
-            processCommandAsync(commandName, userId, channelId, dataNode, token);
+            // Process command synchronously and send immediate response
+            String resultMessage = processCommandSync(commandName, userId, channelId, dataNode);
+            sendInteractionResponse(token, createMessageResponse(resultMessage));
             return;
         }
 
@@ -260,13 +258,11 @@ public class DiscordGatewayService {
             JsonNode dataNode = data.get("data");
             String customId = dataNode.get("custom_id").asText();
 
-            logger.info("Processing button click: {} with token: {}...", customId, token.substring(0, Math.min(20, token.length())));
+            logger.info("Processing button click: {} synchronously", customId);
 
-            // Send deferred response immediately
-            sendInteractionResponse(token, createDeferredResponse());
-
-            // Process button click asynchronously
-            processButtonClickAsync(customId, userId, channelId, token);
+            // Process button click synchronously and send immediate response
+            String resultMessage = processButtonClickSync(customId, userId, channelId);
+            sendInteractionResponse(token, createMessageResponse(resultMessage));
             return;
         }
     }
@@ -315,6 +311,42 @@ public class DiscordGatewayService {
         } catch (Exception e) {
             logger.error("Error processing button click", e);
             editOriginalResponse(token, "❌ เกิดข้อผิดพลาด");
+        }
+    }
+
+    /**
+     * Process command synchronously and return response message
+     */
+    private String processCommandSync(String commandName, String userId, String channelId, JsonNode data) {
+        try {
+            switch (commandName) {
+                case "plant":
+                    return handlePlantCommandAsync(userId, channelId, data);
+                case "list":
+                    return handleListCommandAsync(userId, channelId);
+                case "cancel":
+                    return handleCancelCommandAsync(userId, channelId, data);
+                case "cancel_all":
+                    return handleCancelAllCommandAsync(userId, channelId);
+                default:
+                    return "❌ ไม่รู้จักคำสั่งนี้";
+            }
+        } catch (Exception e) {
+            logger.error("Error processing command: {}", commandName, e);
+            return "❌ เกิดข้อผิดพลาด";
+        }
+    }
+
+    /**
+     * Process button click synchronously and return response message
+     */
+    private String processButtonClickSync(String customId, String userId, String channelId) {
+        try {
+            cropService.handleUserMessage(userId, customId, channelId, "DISCORD");
+            return "✅ กำลังปลูก " + getCropDisplayName(customId) + "...";
+        } catch (Exception e) {
+            logger.error("Error processing button click", e);
+            return "❌ เกิดข้อผิดพลาด";
         }
     }
 
