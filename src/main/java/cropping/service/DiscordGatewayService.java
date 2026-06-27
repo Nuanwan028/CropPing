@@ -339,9 +339,12 @@ public class DiscordGatewayService {
             saveCropAndSchedule(userId, channelId, customId);
 
             // Edit the deferred response with success message
+            // Emoji is outside bold markdown to avoid duplication
             String message = String.format(
-                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก **%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
-                cropDisplay, harvestTimeStr
+                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก %s**%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
+                cropDisplay.split(" ", 2)[0] + " ",  // emoji
+                cropDisplay.split(" ", 2)[1],         // name without emoji
+                harvestTimeStr
             );
             editOriginalResponse(token, message);
             logger.info("Button click processed: {}", customId);
@@ -372,9 +375,12 @@ public class DiscordGatewayService {
             saveCropAndSchedule(userId, channelId, cropName);
 
             // Edit response with success message
+            // Emoji is outside bold markdown to avoid duplication
             String message = String.format(
-                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก **%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
-                cropDisplay, harvestTimeStr
+                "✅ ปลูกพืชสำเร็จ!\nเริ่มปลูก %s**%s** แล้ว\nจะเก็บเกี่ยวเมื่อถึงเวลา: **%s**",
+                cropDisplay.split(" ", 2)[0] + " ",  // emoji
+                cropDisplay.split(" ", 2)[1],         // name without emoji
+                harvestTimeStr
             );
             editOriginalResponse(token, message);
         } else {
