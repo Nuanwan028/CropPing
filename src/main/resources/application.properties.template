@@ -23,8 +23,8 @@ server.port=${PORT:8080}
 # LINE Bot Configuration (optional)
 # ========================================
 # Get from: https://developers.line.biz/console/
-line.channel.token=YOUR_LINE_CHANNEL_TOKEN_HERE
-line.channel.secret=YOUR_LINE_CHANNEL_SECRET_HERE
+line.channel.token=${LINE_TOKEN:dummy}
+line.channel.secret=${LINE_SECRET:dummy}
 
 # ========================================
 # Discord Bot Configuration
@@ -32,13 +32,14 @@ line.channel.secret=YOUR_LINE_CHANNEL_SECRET_HERE
 # Get from: https://discord.com/developers/applications
 # Step 1: Create Application → Bot → Copy Token
 # Step 2: General Information → Copy Application ID
-discord.bot.token=YOUR_DISCORD_BOT_TOKEN_HERE
-discord.application.id=YOUR_DISCORD_APPLICATION_ID_HERE
+discord.bot.token=${DISCORD_BOT_TOKEN:dummy}
+discord.application.id=${DISCORD_APPLICATION_ID:dummy}
 
 # ========================================
-# Environment Variables (Recommended)
+# Environment Variables
 # ========================================
-# Instead of hardcoding, use environment variables:
-# export LINE_TOKEN=your_token
-# export DISCORD_BOT_TOKEN=your_token
-# export DISCORD_APPLICATION_ID=your_app_id
+# Set these in your deployment platform (Render, Heroku, etc.)
+# LINE_TOKEN - your LINE channel token (optional)
+# LINE_SECRET - your LINE channel secret (optional)
+# DISCORD_BOT_TOKEN - your Discord bot token
+# DISCORD_APPLICATION_ID - your Discord application ID
