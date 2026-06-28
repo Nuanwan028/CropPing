@@ -20,6 +20,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,6 +54,12 @@ public class DiscordGatewayService {
     private volatile long lastHeartbeatAck = 0;
     private volatile String sessionId = null;
     private volatile int sequenceNumber = 0;
+    private volatile boolean isReconnecting = false;
+    private final ScheduledExecutorService reconnectExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "Discord-Reconnect");
+        t.setDaemon(true);
+        return t;
+    });
 
     public DiscordGatewayService(CropService cropService, DiscordService discordService,
                                   CropRepository cropRepository, SchedulerService schedulerService) {
@@ -70,7 +78,12 @@ public class DiscordGatewayService {
      */
     @PostConstruct
     @Async
-    public void connect() {
+    public synchronized void connect() {
+        if (isConnected) {
+            logger.info("Already connected, skipping connection attempt");
+            return;
+        }
+
         try {
             logger.info("Discord Bot Token: {}...", botToken.substring(0, Math.min(20, botToken.length())));
             logger.info("Discord Application ID: {}", applicationId);
@@ -138,6 +151,10 @@ public class DiscordGatewayService {
         public void onClosing(WebSocket webSocket, int code, String reason) {
             logger.warn("WebSocket closing: {} - {}", code, reason);
             isConnected = false;
+            // Schedule reconnect for normal close codes
+            if (code != 1000) { // 1000 = normal close, don't reconnect
+                scheduleReconnect(5000);
+            }
         }
 
         @Override
@@ -153,7 +170,9 @@ public class DiscordGatewayService {
             logger.warn("WebSocket closed: {} - {}", code, reason);
             isConnected = false;
             // Schedule reconnect with exponential backoff
-            scheduleReconnect(5000);
+            if (code != 1000) { // 1000 = normal close, don't reconnect
+                scheduleReconnect(5000);
+            }
         }
     }
 
@@ -774,18 +793,34 @@ public class DiscordGatewayService {
     }
 
     /**
-     * Schedule reconnect with delay
+     * Schedule reconnect with delay using executor
      */
     private void scheduleReconnect(long delay) {
-        try {
-            Thread.sleep(delay);
-            if (!isConnected) {
-                logger.info("Attempting to reconnect...");
-                connect();
-            }
-        } catch (InterruptedException e) {
-            logger.info("Reconnect interrupted");
+        if (isReconnecting) {
+            logger.debug("Reconnect already scheduled, skipping");
+            return;
         }
+
+        isReconnecting = true;
+        logger.info("Scheduling reconnect in {} ms", delay);
+
+        reconnectExecutor.schedule(() -> {
+            try {
+                if (!isConnected) {
+                    logger.info("Attempting to reconnect...");
+                    isReconnecting = false;
+                    connect();
+                } else {
+                    isReconnecting = false;
+                    logger.info("Already connected, canceling reconnect");
+                }
+            } catch (Exception e) {
+                logger.error("Reconnect failed", e);
+                isReconnecting = false;
+                // Schedule another retry with exponential backoff
+                scheduleReconnect(Math.min(delay * 2, 60000));
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -795,6 +830,8 @@ public class DiscordGatewayService {
     public void disconnect() {
         logger.info("Disconnecting from Discord Gateway...");
         isConnected = false;
+        isReconnecting = false;
+        reconnectExecutor.shutdownNow();
         if (webSocket != null) {
             webSocket.close(1000, "Application shutting down");
         }
